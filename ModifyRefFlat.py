@@ -74,37 +74,44 @@ for line in RefFlat:
 			currentExon = (int(exonStarts[exonIdx]), int(exonEnds[exonIdx]))
 			if txEndMod < currentExon[1]: #or =?
 				exonEndsMod[exonIdx] = str(txEndMod)
+				ListEnd = exonIdx
 				break
-			else: 
-				del exonStartsMod[exonIdx]
-				del exonEndsMod[exonIdx]
+			# else: 
+			# 	del exonStartsMod[exonIdx]
+			# 	del exonEndsMod[exonIdx]
+		exonStartsMod = exonStartsMod[:ListEnd]
+		exonEndsMod = exonEndsMod[:ListEnd]
 	
 		if cdsEnd > txEndMod:
 			cdsEnd = txEndMod
+			#This warning is all I have for issues like this, but it could be expanded. 
 			print("Warning: {} contains no 3p UTR in modified annotations."\
 				.format(accession))
 		txEnd = txEndMod
 
 
 	elif strand == '-':
-		#only for positive right now.
 		for exonIdx in range(len(exonStarts)): #the main code block for output exons
 			#Tuple of starts and ends.
 			currentExon = (int(exonStarts[exonIdx]), int(exonEnds[exonIdx]))
 			if txEndMod < currentExon[1]: #or =?
 				exonStartsMod[exonIdx] = str(txEndMod)
+				ListStart = exonIdx
 				break
-			else: 
-				del exonStartsMod[exonIdx]
-				del exonEndsMod[exonIdx]
+			# else: 
+			# 	del exonStartsMod[exonIdx]
+			# 	del exonEndsMod[exonIdx]
 	
+		exonStartsMod = exonStartsMod[ListStart:]
+		exonEndsMod = exonEndsMod[ListStart:]
+
 		if cdsStart < txEndMod:
 			cdsStart = txEndMod
 			print("Warning: {} contains no 3p UTR in modified annotations."\
 				.format(accession))
 		txStart = txEndMod
 
-	NewRefFlatLine = "\t".join([symbol, accession, chrom, strand, str(txStart), \
+	NewRefFlatLine = "\t".join([symbol, accession, chrom, strand, str(txStart),\
 		str(txEnd), str(cdsStart), str(cdsEnd), str(len(exonStartsMod)),\
 		",".join(exonStartsMod) + ",", ",".join(exonEndsMod) + ","])
 	RefFlatOut.write(NewRefFlatLine + "\n")

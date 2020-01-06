@@ -18,7 +18,8 @@ TpUtrBed = open(sys.argv[4],'w+')
 
 def bed12writer(handle, accession, strand, chrom, start, \
 	end, featSizes,featStarts):
-	handle.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
+	if len(featSizes) == 0: pass #Don't write lines that don't have features. 
+	else: handle.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(\
 		chrom, start, end, accession, 0, strand, start, end, "255,0,0", \
 		len(featSizes), ",".join([str(i) for i in featSizes]),\
 		",".join([str(i) for i in featStarts])))
@@ -33,12 +34,12 @@ for line in RefFlat:
 	accession     = line.split("\t")[1]
 	NumberOfExons = int(line.split("\t")[8])
 
-	txstart       = int(line.split("\t")[4])
-	txEnd         = int(line.split("\t")[5])
-	cdsStart      = int(line.split("\t")[6])
-	cdsEnd        = int(line.split("\t")[7])
-	exonStarts    = line.split("\t")[9].split(",")[:-1] #remove last element
-	exonEnds      = line.strip().split("\t")[10].split(",")[:-1]
+	TxStart       = int(line.split("\t")[4])
+	TxEnd         = int(line.split("\t")[5])
+	CdsStart      = int(line.split("\t")[6])
+	CdsEnd        = int(line.split("\t")[7])
+	ExonStarts    = line.split("\t")[9].split(",")[:-1] #remove last element
+	ExonEnds      = line.strip().split("\t")[10].split(",")[:-1]
 
 	if strand == ('-'): pos = False
 
@@ -48,76 +49,84 @@ for line in RefFlat:
 	TpUtr = False
 	
 	#Lists for bed12
-	FpUtrLength, CdsLength, TpUtrLength = [], [], []
-	FpUtrStart, CdsStart, TpUtrStart = [], [], []
+	FpUtrLengthList, CdsLengthList, TpUtrLengthList = [], [], []
+	FpUtrStartList, CdsStartList, TpUtrStartList = [], [], []
 
-	for exonIdx in range(len(exonStarts)): #the main code block for output exons
+	for exonIdx in range(len(ExonStarts)): #the main code block for output exons
 		#Tuple of starts and ends.
-		currentExon = (int(exonStarts[exonIdx]), int(exonEnds[exonIdx]))
-
-		#If the exon contains the cdsStart
-		if FpUtr and currentExon[0] < cdsStart < currentExon[1] :
-			FpUtrLength.append(cdsStart - currentExon[0])
-			FpUtrStart.append(currentExon[0] - txstart)
-			CdsLength.append(currentExon[1] - cdsStart)
-			CdsStart.append(cdsStart - cdsStart)
-
-			FpUtr = False
-			Cds = True
-
-		#Deals with an exon ending on a cdsStart. 
-		elif cdsStart == currentExon[1]:
-			FpUtrLength.append(cdsStart - currentExon[0])
-			FpUtrStart.append(currentExon[0] - txstart)
+		currentExon = (int(ExonStarts[exonIdx]), int(ExonEnds[exonIdx]))
+		#If the exon contains the CdsStart
+		if FpUtr and currentExon[0] < CdsStart < currentExon[1] :
+			FpUtrLengthList.append(CdsStart - currentExon[0])
+			FpUtrStartList.append(currentExon[0] - TxStart)
+			CdsLengthList.append(currentExon[1] - CdsStart)
+			CdsStartList.append(CdsStart - CdsStart)
 
 			FpUtr = False
 			Cds = True
 
+		#Deals with CdsStart and TxStart being the same. (no 5p UTR)
+		elif CdsStart == currentExon[0]:
+			CdsLengthList.append(currentExon[1] - CdsStart)
+			CdsStartList.append(CdsStart - CdsStart)
+
+			FpUtr = False
+			Cds = True
+
+		#Deals with an exon ending on a CdsStart. 
+		elif CdsStart == currentExon[1]:
+			FpUtrLengthList.append(CdsStart - currentExon[0])
+			FpUtrStartList.append(currentExon[0] - TxStart)
+
+			FpUtr = False
+			Cds = True
 
 		#If the exon is fully in the 5p utr
 		elif FpUtr:
-			FpUtrLength.append(currentExon[1] - currentExon[0])
-			FpUtrStart.append(currentExon[0] - txstart)
+			FpUtrLengthList.append(currentExon[1] - currentExon[0])
+			FpUtrStartList.append(currentExon[0] - TxStart)
 
 		#If the exon is fully in the cds
-		elif Cds and not currentExon[0] < cdsEnd < currentExon[1]:
-			CdsLength.append(currentExon[1] - currentExon[0])
-			CdsStart.append(currentExon[0] - cdsStart)
+		elif Cds and not (currentExon[0] < CdsEnd < currentExon[1]):
+			CdsLengthList.append(currentExon[1] - currentExon[0])
+			CdsStartList.append(currentExon[0] - CdsStart)
 
-			#Deals with an exon ending on a cdsEnd. 
-			if cdsEnd == currentExon[1]:
-				Cds = False
-
-		#If the exon contains the cdsEnd
-		elif Cds and (currentExon[0] < cdsEnd < currentExon[1]):
-			CdsLength.append(cdsEnd - currentExon[0])
-			CdsStart.append(currentExon[0] - cdsStart)
-			TpUtrLength.append(currentExon[1] - cdsEnd)
-			TpUtrStart.append(cdsEnd - cdsEnd)
-			
+		#If the exon contains the CdsEnd
+		elif Cds and (currentExon[0] < CdsEnd <= currentExon[1]):
+			CdsLengthList.append(CdsEnd - currentExon[0])
+			CdsStartList.append(currentExon[0] - CdsStart)
 			Cds = False
 			TpUtr = True
 
+			#Deals with an exon ending on a CdsEnd. 
+			if CdsEnd == TxEnd: TpUtr = False
+			else: 
+				TpUtrLengthList.append(currentExon[1] - CdsEnd)
+				TpUtrStartList.append(CdsEnd - CdsEnd)
+			
+
+
 		#If the exon is fully in the 3p utr
-		else:
-			TpUtrLength.append(currentExon[1] - currentExon[0])
-			TpUtrStart.append(currentExon[0] - cdsEnd)
+		elif TpUtr:
+			TpUtrLengthList.append(currentExon[1] - currentExon[0])
+			TpUtrStartList.append(currentExon[0] - CdsEnd)
+
 		
 	#writing files. 
 	if pos:
-		bed12writer(FpUtrBed, accession, strand, chrom, txstart, cdsStart,\
-			FpUtrLength, FpUtrStart)
-		bed12writer(CdsBed, accession, strand, chrom, cdsStart, cdsEnd,\
-			CdsLength, CdsStart)
-		bed12writer(TpUtrBed, accession, strand, chrom, cdsEnd, txEnd,\
-			TpUtrLength, TpUtrStart)
+		bed12writer(FpUtrBed, accession, strand, chrom, TxStart, CdsStart,\
+			FpUtrLengthList, FpUtrStartList)
+		bed12writer(CdsBed, accession, strand, chrom, CdsStart, CdsEnd,\
+			CdsLengthList, CdsStartList)
+		bed12writer(TpUtrBed, accession, strand, chrom, CdsEnd, TxEnd,\
+			TpUtrLengthList, TpUtrStartList)
 	else: #just switches the 5p and 3p file writing. 
-		bed12writer(TpUtrBed, accession, strand, chrom, txstart, cdsStart,\
-			FpUtrLength, FpUtrStart)
-		bed12writer(CdsBed, accession, strand, chrom, cdsStart, cdsEnd,\
-			CdsLength, CdsStart)
-		bed12writer(FpUtrBed, accession, strand, chrom, cdsEnd, txEnd,\
-			TpUtrLength, TpUtrStart)
+		bed12writer(TpUtrBed, accession, strand, chrom, TxStart, CdsStart,\
+			FpUtrLengthList, FpUtrStartList)
+		bed12writer(CdsBed, accession, strand, chrom, CdsStart, CdsEnd,\
+			CdsLengthList, CdsStartList)
+		bed12writer(FpUtrBed, accession, strand, chrom, CdsEnd, TxEnd,\
+			TpUtrLengthList, TpUtrStartList)
 
 
 #Close the files

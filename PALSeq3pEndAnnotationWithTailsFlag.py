@@ -38,7 +38,7 @@ for.
 palBedFile = open(sys.argv[1],'r')
 outFile = open(sys.argv[2],'w+')
 if sys.argv[3] == 'True' or sys.argv[3] == 'TRUE': flag = True
-else: flag = False
+else: flag = False #If False, don't consider the tail data.
 Tails1  = open("/lab/solexa_bartel/eichhorn/5EU_RPF/miR-1_miR-155_timecourse_tail_analysis/unfiltered_analysis/Tail_lengths/CGGTTA-1_individualtails.txt",'r')
 Tails2  = open("/lab/solexa_bartel/eichhorn/5EU_RPF/miR-1_miR-155_timecourse_tail_analysis/unfiltered_analysis/Tail_lengths/CGGTTA-2_individualtails.txt",'r')
 
