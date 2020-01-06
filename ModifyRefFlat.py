@@ -44,15 +44,14 @@ for accession, tagTuple in AnnoDict.items():
 #iterate through RefFlat
 for line in RefFlat:
 
-	pos = True
 
 	#Parse the line.
+	symbol        = line.split("\t")[0]
 	strand        = line.split("\t")[3]
 	chrom         = line.split("\t")[2]
 	accession     = line.split("\t")[1]
 	NumberOfExons = int(line.split("\t")[8])
-
-	txstart       = int(line.split("\t")[4])
+	txStart       = int(line.split("\t")[4])
 	txEnd         = int(line.split("\t")[5])
 	cdsStart      = int(line.split("\t")[6])
 	cdsEnd        = int(line.split("\t")[7])
@@ -63,12 +62,53 @@ for line in RefFlat:
 		RefFlatOut.write(line)
 		continue
 
-	if strand == ('-'): pos = False
 
-	#Change tx end to the correct coordinate above.
-	#Change the last exon to end at this coordinate
-	#Remove downstream exons
-	#If it is before CdsEnd, throw a warning with the accession code and make CdsEnd = TxEnd.
+	txEndMod = TxEndDict[accession]
+	exonStartsMod = exonStarts[:]
+	exonEndsMod = exonEnds[:]
+
+	if strand == '+':
+		#only for positive right now.
+		for exonIdx in range(len(exonStarts) - 1,0,-1): #the main code block for output exons
+			#Tuple of starts and ends.
+			currentExon = (int(exonStarts[exonIdx]), int(exonEnds[exonIdx]))
+			if txEndMod < currentExon[1]: #or =?
+				exonEndsMod[exonIdx] = str(txEndMod)
+				break
+			else: 
+				del exonStartsMod[exonIdx]
+				del exonEndsMod[exonIdx]
+	
+		if cdsEnd > txEndMod:
+			cdsEnd = txEndMod
+			print("Warning: {} contains no 3p UTR in modified annotations."\
+				.format(accession))
+		txEnd = txEndMod
+
+
+	elif strand == '-':
+		#only for positive right now.
+		for exonIdx in range(len(exonStarts)): #the main code block for output exons
+			#Tuple of starts and ends.
+			currentExon = (int(exonStarts[exonIdx]), int(exonEnds[exonIdx]))
+			if txEndMod < currentExon[1]: #or =?
+				exonStartsMod[exonIdx] = str(txEndMod)
+				break
+			else: 
+				del exonStartsMod[exonIdx]
+				del exonEndsMod[exonIdx]
+	
+		if cdsStart < txEndMod:
+			cdsStart = txEndMod
+			print("Warning: {} contains no 3p UTR in modified annotations."\
+				.format(accession))
+		txStart = txEndMod
+
+	NewRefFlatLine = "\t".join([symbol, accession, chrom, strand, str(txStart), \
+		str(txEnd), str(cdsStart), str(cdsEnd), str(len(exonStartsMod)),\
+		",".join(exonStartsMod) + ",", ",".join(exonEndsMod) + ","])
+	RefFlatOut.write(NewRefFlatLine + "\n")
+
 
 #Close the files
 RefFlat.close()
