@@ -6,13 +6,10 @@ import Bio, sys
 from Bio import SeqIO
 
 transcripts = open(sys.argv[1],"rU")
-outputfile=open(sys.argv[2],"w+")
-if sys.argv[3]=="True": outputfile.write("accession\tlength\n")
+outputfile = open(sys.argv[2],"w+")
+if sys.argv[3] == "True": outputfile.write("accession\tlength\n") #add a header
 
 for record in SeqIO.parse(transcripts, "fasta"):
     outputfile.write("%s\t%s\n"%(record.id,len(record.seq)))
-#for record in SeqIO.parse(transcripts, "fasta"):
-#    #if 'CCCGCTTTCTGTTTTCGGTGTCCTTGGTCATGGTGCTF' in record.seq: print record.id
-#    outputfile.write("%s\t%s\n"%(len(record.seq),record.id.split("_")[-1]))
 
 outputfile.close()
