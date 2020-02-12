@@ -52,9 +52,14 @@ for line in RefFlat:
 	FpUtrLengthList, CdsLengthList, TpUtrLengthList = [], [], []
 	FpUtrStartList, CdsStartList, TpUtrStartList = [], [], []
 
+	#For dealing with a 3' UTR being its own exon.
+	TpUtrBegin = CdsEnd
+	TpUtrNotContig = False
+
 	for exonIdx in range(len(ExonStarts)): #the main code block for output exons
 		#Tuple of starts and ends.
 		currentExon = (int(ExonStarts[exonIdx]), int(ExonEnds[exonIdx]))
+
 		#If the exon contains the CdsStart
 		if FpUtr and currentExon[0] < CdsStart < currentExon[1] :
 			FpUtrLengthList.append(CdsStart - currentExon[0])
@@ -87,7 +92,7 @@ for line in RefFlat:
 			FpUtrStartList.append(currentExon[0] - TxStart)
 
 		#If the exon is fully in the cds
-		elif Cds and not (currentExon[0] < CdsEnd < currentExon[1]):
+		elif Cds and not (currentExon[0] < CdsEnd <= currentExon[1]):
 			CdsLengthList.append(currentExon[1] - currentExon[0])
 			CdsStartList.append(currentExon[0] - CdsStart)
 
@@ -98,8 +103,12 @@ for line in RefFlat:
 			Cds = False
 			TpUtr = True
 
+			#Deals with a 3' UTR being its own exon. 
+			if CdsEnd == currentExon[1]: 
+				TpUtrNotContig = True 
+
 			#Deals with an exon ending on a CdsEnd. 
-			if CdsEnd == TxEnd: TpUtr = False
+			elif CdsEnd == TxEnd: TpUtr = False
 			else: 
 				TpUtrLengthList.append(currentExon[1] - CdsEnd)
 				TpUtrStartList.append(CdsEnd - CdsEnd)
@@ -108,24 +117,29 @@ for line in RefFlat:
 
 		#If the exon is fully in the 3p utr
 		elif TpUtr:
+			if TpUtrNotContig: 
+				TpUtrBegin = currentExon[0]
+				TpUtrNotContig = False
+			# 	continue
+			# 	# pdb.set_trace()
 			TpUtrLengthList.append(currentExon[1] - currentExon[0])
-			TpUtrStartList.append(currentExon[0] - CdsEnd)
+			TpUtrStartList.append(currentExon[0] - TpUtrBegin)
 
 		
-	#writing files. 
+	#writing files.  
 	if pos:
 		bed12writer(FpUtrBed, accession, strand, chrom, TxStart, CdsStart,\
 			FpUtrLengthList, FpUtrStartList)
-		bed12writer(CdsBed, accession, strand, chrom, CdsStart, CdsEnd,\
+		bed12writer(CdsBed, accession, strand, chrom, CdsStart, TpUtrBegin,\
 			CdsLengthList, CdsStartList)
-		bed12writer(TpUtrBed, accession, strand, chrom, CdsEnd, TxEnd,\
+		bed12writer(TpUtrBed, accession, strand, chrom, TpUtrBegin, TxEnd,\
 			TpUtrLengthList, TpUtrStartList)
 	else: #just switches the 5p and 3p file writing. 
 		bed12writer(TpUtrBed, accession, strand, chrom, TxStart, CdsStart,\
 			FpUtrLengthList, FpUtrStartList)
-		bed12writer(CdsBed, accession, strand, chrom, CdsStart, CdsEnd,\
+		bed12writer(CdsBed, accession, strand, chrom, CdsStart, TpUtrBegin,\
 			CdsLengthList, CdsStartList)
-		bed12writer(FpUtrBed, accession, strand, chrom, CdsEnd, TxEnd,\
+		bed12writer(FpUtrBed, accession, strand, chrom, TpUtrBegin, TxEnd,\
 			TpUtrLengthList, TpUtrStartList)
 
 
