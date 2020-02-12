@@ -67,6 +67,11 @@ for line in RefFlat:
 			CdsLengthList.append(currentExon[1] - CdsStart)
 			CdsStartList.append(CdsStart - CdsStart)
 
+			#single exon genes only
+			if (currentExon[0] < CdsEnd <= currentExon[1]):
+				TpUtrLengthList.append(currentExon[1] - CdsEnd)
+				TpUtrStartList.append(CdsEnd - CdsEnd)
+				break
 			FpUtr = False
 			Cds = True
 
