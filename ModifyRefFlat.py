@@ -69,18 +69,21 @@ for line in RefFlat:
 
 	if strand == '+':
 		#only for positive right now.
-		for exonIdx in range(len(exonStarts) - 1,0,-1): #the main code block for output exons
+		# if accession == 'NM_026058': pdb.set_trace()
+		for exonIdx in range(len(exonStarts) - 1, -1, -1): #the main code block for output exons
 			#Tuple of starts and ends.
 			currentExon = (int(exonStarts[exonIdx]), int(exonEnds[exonIdx]))
-			if txEndMod < currentExon[1]: #or =?
+
+			#the new end within an exon OR new end beyond the last exon
+			if currentExon[0] < txEndMod: #or =?
 				exonEndsMod[exonIdx] = str(txEndMod)
 				ListEnd = exonIdx
 				break
 			# else: 
 			# 	del exonStartsMod[exonIdx]
 			# 	del exonEndsMod[exonIdx]
-		exonStartsMod = exonStartsMod[:ListEnd]
-		exonEndsMod = exonEndsMod[:ListEnd]
+		exonStartsMod = exonStartsMod[:(ListEnd + 1)]
+		exonEndsMod = exonEndsMod[:(ListEnd + 1)]
 	
 		if cdsEnd > txEndMod:
 			cdsEnd = txEndMod
@@ -102,8 +105,8 @@ for line in RefFlat:
 			# 	del exonStartsMod[exonIdx]
 			# 	del exonEndsMod[exonIdx]
 	
-		exonStartsMod = exonStartsMod[ListStart:]
-		exonEndsMod = exonEndsMod[ListStart:]
+		exonStartsMod = exonStartsMod[(ListStart):]
+		exonEndsMod = exonEndsMod[(ListStart):]
 
 		if cdsStart < txEndMod:
 			cdsStart = txEndMod
